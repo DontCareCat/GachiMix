@@ -1,0 +1,305 @@
+Человек Алексей, [23.10.20 13:36]
+[Переслано від Denys Sytnychenko]
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using System.DirectoryServices;
+
+namespace WindowsFormsApplication1
+{
+    public partial class Form1 : Form
+    {
+        private DirectoryEntry domain;
+        private DirectoryEntry supportTeam;
+        private DirectoryEntry homeUsers;
+        private DirectoryEntry businessTeam;
+
+        private DirectoryEntry advancedSpecialists;
+        private DirectoryEntry advancedWorkers;
+        private DirectoryEntry officeCairo;
+
+        const string dc = "SYTNYCHENKO";
+        const string password = "P@ssw0rd";
+        const string userSchema = "user";
+        const string groupSchema = "group";
+        const string oUnitSchema = "organizationalUnit";
+
+        const string homeUsersName = "HomeUsers";
+        const string supportTeamName = "SupportTeam";
+        const string businessTeamName = "BusinessUsers";
+        const string advancedSpecialistsName = "AdvancedSpecialists";
+        const string advancedWorkersName = "AdvancedWorkers";
+        const string officeInCairo = "OfficeinCairo";
+        public Form1()
+        {
+            InitializeComponent();
+            domain = new DirectoryEntry("LDAP://DC=" + dc + ",DC=UA");
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        //2
+        private void button1_Click(object sender, EventArgs e)
+        {
+            supportTeam = CreateOrganization(domain, "SupportTeam");
+            homeUsers = CreateOrganization(supportTeam, "HomeUsers");
+            businessTeam = CreateOrganization(supportTeam, "BusinessUsers");
+
+            MessageBox.Show("Organizations added");
+        }
+        //3
+        private void CreateU_Click(object sender, EventArgs e)
+    {
+            using (DirectoryEntry homeUsers = new DirectoryEntry("LDAP://OU=HomeUsers,OU=SupportTeam,DC=" + dc + ",DC=UA"))
+            {
+                for (int i = 1; i <= 50; i++)
+                {
+                    var user = homeUsers.Children.Add("CN=user-" + i, userSchema);
+
+                    user.Properties["department"].Add("Branch Office");
+                    user.Properties["description"].Add("Very Bad User");
+                    user.Properties["businessCategory"].Add("Secretary");
+                    user.Properties["businessCategory"].Add("Manager");
+                    user.Properties["businessCategory"].Add("HelpDesk");
+
+                    user.CommitChanges();
+
+                    SetPassword(user, password);
+                    user.Properties["userAccountControl"].Value = "544";
+                    user.CommitChanges();
+                }
+            }
+    }
+
+    private static void SetPassword(DirectoryEntry user, string password)
+    {
+      object[] oPassword = new object[] { password };
+      user.Invoke("SetPassword", oPassword);
+      user.CommitChanges();
+    }
+
+        //4
+       private void Changeprop_Click(object sender, EventArgs e)
+       {
+           using (DirectoryEntry homeUsersUnit = new DirectoryEntry("LDAP://OU=HomeUsers,OU=SupportTeam,DC=" + dc + ",DC=UA"))
+           {
+               int counter = 1;
+               Random random = new Random();
+               int spyUserIndex = random.Next(1, 50);
+
+               foreach (DirectoryEntry childEntry in homeUsersUnit.Children)
+               {
+                   if (childEntry.Properties["objectClass"].Contains(userSchema))
+                   {
+                       childEntry.Properties["company"].Clear();
+                       childEntry.Properties["telephoneNumber"].Clear();
+                       childEntry.Properties["otherMobile"].Clear();
+
+                       childEntry.Properties["company"].Add("Kiev National University");
+                       childEntry.Properties["telephoneNumber"].Add("044-5260522");
+
+Человек Алексей, [23.10.20 13:36]
+[Переслано від Denys Sytnychenko]
+childEntry.Properties["otherMobile"].Add("067-2334383");
+                       childEntry.Properties["otherMobile"].Add("050-2206789");
+                       childEntry.Properties["otherMobile"].Add("063-2184545");
+
+                       if (counter == spyUserIndex)
+                       {
+                           childEntry.Properties["info"].Clear();
+                           childEntry.Properties["info"].Add("A spy!");
+                           MessageBox.Show(childEntry.Name.ToString() + " is a spy!");
+                       }
+
+                       childEntry.CommitChanges();
+                       counter++;
+                   }
+               }
+
+               MessageBox.Show("Users created");
+           }
+       }
+        //5
+       private void Add_btn_Click(object sender, EventArgs e)
+       {
+           using (DirectoryEntry homeUsers = new DirectoryEntry("LDAP://OU=HomeUsers,OU=SupportTeam,DC=" + dc + ",DC=UA"))
+           {
+               advancedSpecialists = CreateGroup(homeUsers, advancedSpecialistsName);
+
+               advancedWorkers = CreateGroup(homeUsers, "AdvancedWorkers");
+               advancedWorkers.Properties["member"].Add("CN=" + advancedSpecialistsName + ",OU=" + homeUsersName + ",OU=" + supportTeamName + ",DC=" + dc + ",DC=UA");
+               advancedWorkers.CommitChanges();
+               officeCairo = CreateGroup(homeUsers, "OfficeinCairo");
+           }
+      
+    }
+
+    private DirectoryEntry CreateOrganization(DirectoryEntry parentEntry, string name)
+    {
+      var organization = parentEntry.Children.Add("OU="+name, oUnitSchema);
+      organization.CommitChanges();
+
+      return organization;
+    }
+
+    private DirectoryEntry CreateGroup(DirectoryEntry parentEntry, string name)
+    {
+      var group = parentEntry.Children.Add("CN="+name, groupSchema);
+      group.Properties["sAMAccountName"].Add(name);
+      group.CommitChanges();
+
+      return group;
+    }
+        //6
+        private void Move_users_Click(object sender, EventArgs e)
+        {
+            var homeUsersUnit = new DirectoryEntry("LDAP://OU=HomeUsers,OU=SupportTeam,DC=" + dc + ",DC=UA");
+            var businessTeamUnit = new DirectoryEntry("LDAP://OU=BusinessUsers,OU=SupportTeam,DC=" + dc + ",DC=UA");
+
+            Random random = new Random();
+
+
+            foreach (DirectoryEntry childEntry in homeUsersUnit.Children)
+            {
+                if (childEntry.Properties["objectClass"].Contains(userSchema))
+                {
+                    int groupIndex = random.Next(0, 3);
+                    string groupName = null;
+                    switch (groupIndex)
+                    {
+                        case 0:
+                            groupName = advancedSpecialistsName;
+                            break;
+                        case 1:
+                            groupName = advancedWorkersName;
+                            break;
+                        case 2:
+                            groupName = officeInCairo;
+                            break;
+                        default:
+                            throw new ArgumentException("Wrong directory index");
+                    }
+                    using (var group = new DirectoryEntry("LDAP://CN=" + groupName + ",OU=HomeUsers,OU=SupportTeam,DC=" + dc + ",DC=UA"))
+                    {
+                        group.Properties["member"].Add(childEntry.Properties["distinguishedName"].Value);
+                        group.CommitChanges();
+                    }
+
+                    childEntry.MoveTo(businessTeamUnit);
+                    childEntry.CommitChanges();
+                }
+            }
+
+            MessageBox.Show("Users moved");
+        }
+        //7
+        private void Show_AdvSpec_Click(object sender, EventArgs e)
+        {
+            var advancedSpecsGroup = new DirectoryEntry("LDAP://CN=" + advancedSpecialistsName + ",OU=HomeUsers,OU=SupportTeam,DC=" + dc + ",DC=UA");
+            var names = new List<string>();
+
+Человек Алексей, [23.10.20 13:36]
+[Переслано від Denys Sytnychenko]
+foreach (string distinguishedName in advancedSpecsGroup.Properties["member"])
+            {
+                names.Add(distinguishedName);
+            }
+
+            var namesArray = names.ToArray();
+            var joinedNames = string.Join("\n", namesArray);
+            MessageBox.Show(names.Count.ToString());
+            MessageBox.Show(joinedNames);
+        }
+        //8
+        private void Delete2_Click(object sender, EventArgs e)
+        {
+            var userNamesToDelete = new List<string>();
+            var advancedSpecsGroup = new DirectoryEntry("LDAP://CN=" + advancedSpecialistsName + ",OU=HomeUsers,OU=SupportTeam,DC=" + dc + ",DC=UA");
+
+            foreach (string distinguishedName in advancedSpecsGroup.Properties["member"])
+            {
+                if (userNamesToDelete.Count == 2)
+                {
+                    break;
+                }
+                userNamesToDelete.Add(distinguishedName);
+            }
+
+            var memberNames = advancedSpecsGroup.Properties["member"];
+
+            foreach (var name in userNamesToDelete)
+            {
+                memberNames.Remove(name);
+            }
+            advancedSpecsGroup.CommitChanges();
+        }
+         //9
+        private void Sign_Click(object sender, EventArgs e)
+        {
+            bool isAuthorized = AuthorizeUser(
+                tbLogin.Text,
+                tbPassword.Text
+            );
+
+            MessageBox.Show(isAuthorized.ToString());
+        }
+
+        private bool AuthorizeUser(string login, string password)
+    {
+      try
+      {
+        string domainAndUsername = "DC="+dc+",DC=UA\\"+login;
+        using (DirectoryEntry AD = new DirectoryEntry("LDAP://DC="+dc+",DC=UA", login, password))
+        {
+          DirectorySearcher S = new DirectorySearcher(AD);
+          S.Filter = "(SAMAccountName=" + login + ")";
+          S.PropertiesToLoad.Add("cn");
+          SearchResult R = S.FindOne();
+          if (R == null)
+          {
+            return false;
+          }
+          else
+          {
+            return true;
+          }
+        }
+      }
+      catch
+      {
+        return false;
+      }
+    }
+        //10
+        private void BlockSpy_Click(object sender, EventArgs e)
+        {
+            Method();
+        }
+
+        private void Method()
+        {
+            var businessTeam = new DirectoryEntry("LDAP://OU=BusinessUsers,OU=SupportTeam,DC=" + dc + ",DC=UA");
+            foreach (DirectoryEntry user in businessTeam.Children)
+            {
+                if (user.Properties["objectClass"].Contains("user") &&
+                  user.Properties["info"].Value != null &&
+                  user.Properties["info"].Value.ToString() == "A spy!")
+                {
+                    int value = (int)user.Properties["userAccountControl"].Value;
+                    user.Properties["userAccountControl"].Value = value | 0x2;
+                    user.CommitChanges();
+                    MessageBox.Show(user.Name.ToString());
+                }
+            }
+        }
+        
+        }
+}
