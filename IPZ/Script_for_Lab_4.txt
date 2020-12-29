@@ -1,0 +1,35 @@
+public class Main
+{
+    static public class Sum{
+    final int C = 3;
+
+    public double sum_f(double n, double m, double st) {
+        try {
+            double result = 0;
+
+            for (float i = 0; i <= n; i += st) {
+                for (float j = 0; j <= m; j += st) {
+                    final double chiselnyk = i * j;//чисельник
+                    final double znamenyk = i + C;//знаменник
+                    result += znamenyk == 0 ? 0 : chiselnyk / znamenyk;
+                }
+            }
+
+            return result;
+        } catch (Exception error) {
+            System.out.println(error.getMessage());
+            return 0;
+        }
+
+    }
+
+}
+    
+	public static void main(String[] args) {
+
+        final Sum final_suma = new Sum();
+	    double result = final_suma.sum_f(12, 13, 2);
+		System.out.println(result);
+	}
+	
+}
